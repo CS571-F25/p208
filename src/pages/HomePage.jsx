@@ -116,18 +116,18 @@ export default function HomePage() {
               to={`/anime/${anime.id}`}
               className="text-decoration-none text-reset"
             >
-              <div className="card h-100">
+              <div className="anime-card">
                 {anime.coverImage?.large && (
-                  <img
-                    src={anime.coverImage.large}
-                    className="card-img-top"
-                    alt={anime.title.userPreferred}
-                  />
+                  <div className="anime-card-image-wrapper">
+                    <img
+                      src={anime.coverImage.large}
+                      alt={anime.title.userPreferred}
+                      className="anime-card-image"
+                    />
+                  </div>
                 )}
-                <div className="card-body">
-                  <h6 className="card-title">
-                    {anime.title.english ?? anime.title.userPreferred}
-                  </h6>
+                <div className="anime-card-title">
+                  {anime.title.english ?? anime.title.userPreferred}
                 </div>
               </div>
             </Link>
