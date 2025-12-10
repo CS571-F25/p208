@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { fetchAnimeById } from "../api/anilist.js";
+import PageContainer from "../components/layout/PageContainer.jsx";
 
 export default function AnimePage() {
   const { id } = useParams();
@@ -40,40 +41,42 @@ export default function AnimePage() {
 
   if (loading) {
     return (
-      <div className="container py-4">
+      <PageContainer>
         <p>Loading anime details…</p>
-      </div>
+      </PageContainer>
     );
   }
 
   if (error) {
     return (
-      <div className="container py-4">
+      <PageContainer>
         <p className="text-danger">Error: {error}</p>
         <p>
           <Link to="/">Back to list</Link>
         </p>
-      </div>
+      </PageContainer>
     );
   }
 
   if (!anime) {
     return (
-      <div className="container py-4">
+      <PageContainer>
         <p>Anime not found.</p>
         <p>
           <Link to="/">Back to list</Link>
         </p>
-      </div>
+      </PageContainer>
     );
   }
 
   return (
-    <div className="container py-4">
-      <button className="btn btn-link p-0 mb-3" onClick={() => navigate(-1) || navigate("/")}>
+    <PageContainer>
+      <button
+        className="btn btn-link p-0 mb-3"
+        onClick={() => navigate(-1) || navigate("/")}
+      >
         &larr; Back
       </button>
-
 
       <div className="row g-3">
         <div className="col-12 col-md-4 col-lg-3 pe-lg-5">
@@ -86,11 +89,13 @@ export default function AnimePage() {
           )}
         </div>
         <div className="col-md-8">
-          <h1 className="mb-2">{anime.title.english ?? anime.title.userPreferred}</h1>
+          <h1 className="mb-2">
+            {anime.title.english ?? anime.title.userPreferred}
+          </h1>
           <p className="text-muted mb-2">
             {anime.format} • {anime.status} •{" "}
             {anime.episodes ?? "?"} eps •{" "}
-            {anime.duration != null ? `${anime.duration} min`: "?"} •{" "}
+            {anime.duration != null ? `${anime.duration} min` : "?"} •{" "}
             {anime.season} {anime.seasonYear}
           </p>
           <p className="mb-2">
@@ -110,7 +115,12 @@ export default function AnimePage() {
           ></div>
           {anime.externalLinks?.length > 0 && (
             <p className="mt-3">
-              <a href={anime.siteUrl} target="_blank" rel="noreferrer" className="me-3">
+              <a
+                href={anime.siteUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="me-3"
+              >
                 AniList
               </a>
               {anime.externalLinks.map((link) => (
@@ -128,6 +138,6 @@ export default function AnimePage() {
           )}
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 }
