@@ -79,3 +79,197 @@ body {
   word-break: break-word;
 }
 
+/* Character Page: Anime appearances cards */
+.character-appearance-card {
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background-color: #ffffff;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.character-appearance-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.14);
+}
+
+.character-appearance-card-image-wrapper {
+  position: relative;
+  width: 100%;
+  padding-top: 140%; /* slightly taller than home page for character context */
+  overflow: hidden;
+}
+
+.character-appearance-card-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.character-appearance-card-body {
+  padding: 0.5rem 0.6rem 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.character-appearance-card-title {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #222;
+  line-height: 1.35;
+
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
+}
+
+.character-appearance-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  align-items: center;
+  font-size: 0.78rem;
+}
+
+.character-appearance-chip {
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background-color: #eef2ff;
+  color: #3730a3;
+  font-weight: 500;
+}
+
+.character-appearance-meta-text {
+  color: #6c757d;
+}
+
+/* Character Page: soft blue favorites chip */
+.character-favorites-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+
+  /* Soft blue background + border */
+  background: rgba(59, 130, 246, 0.12); /* very light blue */
+  border: 1px solid rgba(59, 130, 246, 0.25);
+
+  /* Text color */
+  color: #1d4ed8; /* medium blue */
+
+  font-size: 0.82rem;
+  font-weight: 600;
+
+  /* Subtle shadow only */
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.12);
+}
+
+.character-favorites-icon {
+  font-size: 0.85rem;
+  line-height: 1;
+  color: #1d4ed8;
+  opacity: 0.9;
+}
+
+.character-favorites-text {
+  white-space: nowrap;
+}
+
+/* Anime Page: main character cards */
+.anime-character-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 0.75rem;
+  background-color: #ffffff;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.anime-character-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+}
+
+.anime-character-card-image-wrapper {
+  flex: 0 0 64px;
+  height: 96px;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.anime-character-card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.anime-character-card-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.anime-character-card-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- Relations Section: Small Anime Cards --- */
+
+/* shrink card padding, shadow, and spacing */
+.character-appearance-card--small {
+  padding: 0;
+  border-radius: 0.55rem;
+  overflow: hidden; /* ensure image clips to rounded corners */
+  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.05);
+}
+
+/* smaller image ratio */
+.character-appearance-card-image-wrapper--small {
+  padding-top: 140% !important;
+}
+
+/* smaller title text */
+.character-appearance-card--small .character-appearance-card-title {
+  font-size: 0.78rem;
+  -webkit-line-clamp: 2;
+}
+
+/* smaller meta chip */
+.character-appearance-card--small .character-appearance-chip {
+  font-size: 0.65rem;
+  padding: 0.05rem 0.35rem;
+}
+
+/* smaller meta text */
+.character-appearance-card--small .character-appearance-meta-text {
+  font-size: 0.65rem;
+}
+
+/* shrink body spacing */
+.character-appearance-card--small .character-appearance-card-body {
+  padding: 0.35rem 0.4rem 0.45rem;
+  gap: 0.2rem;
+}
+
+/* relation label smaller */
+.character-appearance-card--small .relation-label {
+  font-size: 0.62rem;
+  opacity: 0.75;
+}

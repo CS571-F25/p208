@@ -8,11 +8,39 @@ function formatBirthday(dob) {
   const { year, month, day } = dob;
   if (!month || !day) return null;
 
-  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const monthNames = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  ];
 
   const base = `${monthNames[month - 1]} ${day}`;
   return year ? `${base}, ${year}` : base;
+}
+
+function cleanInlineText(value) {
+  if (!value) return "";
+  let text = value;
+
+  // Convert AniList spoiler syntax in inline fields:
+  // ~!spoiler text!~  -> [[SPOILER:spoiler text]]
+  text = text.replace(/~!(.+?)!~/gs, (match, p1) => `[[SPOILER:${p1}]]`);
+
+  // [Name](url) -> Name
+  text = text.replace(/\[(.+?)\]\((.+?)\)/g, "$1");
+
+  // <a href="...">Name</a> -> Name
+  text = text.replace(/<a[^>]*>(.*?)<\/a>/gi, "$1");
+
+  // Remove bare URLs
+  text = text.replace(/https?:\/\/\S+/g, "");
+
+  // Remove bold / italic markers
+  text = text.replace(/\*\*(.+?)\*\*/g, "$1");
+  text = text.replace(/__(.+?)__/g, "$1");
+  text = text.replace(/\*(.+?)\*/g, "$1");
+  text = text.replace(/_(.+?)_/g, "$1");
+
+  return text.trim();
 }
 
 function parseDescription(desc) {
@@ -40,7 +68,8 @@ function parseDescription(desc) {
 
       if (m) {
         const label = m[1].trim();
-        const value = m[2].trim();
+        const rawValue = m[2].trim();
+        const value = cleanInlineText(rawValue); // strip links / markdown / inline spoilers
         info.push({ label, value });
         matched = true;
       }
@@ -54,16 +83,22 @@ function parseDescription(desc) {
 
   let text = bodyLines.join("\n");
 
-  // Remove markdown links: [Name](url) -> Name
+  // 1) Markdown links: [Name](url) -> Name
   text = text.replace(/\[(.+?)\]\((.+?)\)/g, "$1");
 
-  // Remove bold/italic markers: **text**, __text__, *text*, _text_
-  text = text.replace(/\*\*(.+?)\*\*/g, "$1");
-  text = text.replace(/__(.+?)__/g, "$1");
-  text = text.replace(/\*(.+?)\*/g, "$1");
-  text = text.replace(/_(.+?)_/g, "$1");
+  // 2) HTML links: <a href="...">Name</a> -> Name
+  text = text.replace(/<a[^>]*>(.*?)<\/a>/gi, "$1");
 
-  // Convert AniList spoiler tags ~!text!~ into placeholder tokens for later rendering
+  // 3) Bare URLs: https://something -> removed
+  text = text.replace(/https?:\/\/\S+/g, "");
+
+  // 4) Remove bold / italic markers
+  text = text.replace(/\*\*(.+?)\*\*/g, "$1"); // **text**
+  text = text.replace(/__(.+?)__/g, "$1");     // __text__
+  text = text.replace(/\*(.+?)\*/g, "$1");     // *text*
+  text = text.replace(/_(.+?)_/g, "$1");       // _text_
+
+  // 5) Replace AniList spoiler syntax ~!spoiler!~
   text = text.replace(/~!(.+?)!~/gs, (match, p1) => `[[SPOILER:${p1}]]`);
 
   return { info, text: text.trim() };
@@ -75,6 +110,37 @@ export default function CharacterPage() {
   const [character, setCharacter] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  function renderTextWithSpoilers(text) {
+    if (!text) return null;
+
+    const pattern = /\[\[SPOILER:(.+?)\]\]/g;
+    const nodes = [];
+    let lastIndex = 0;
+    let match;
+    let key = 0;
+
+    while ((match = pattern.exec(text)) !== null) {
+      // Plain text before the spoiler
+      if (match.index > lastIndex) {
+        nodes.push(text.slice(lastIndex, match.index));
+      }
+
+      // Spoiler chunk
+      nodes.push(
+        <Spoiler key={`sp-${key++}`}>{match[1]}</Spoiler>
+      );
+
+      lastIndex = pattern.lastIndex;
+    }
+
+    // Remaining text after last spoiler
+    if (lastIndex < text.length) {
+      nodes.push(text.slice(lastIndex));
+    }
+
+    return nodes;
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -118,30 +184,79 @@ export default function CharacterPage() {
 
   const birthday = formatBirthday(character?.dateOfBirth);
 
+  const favouriteCount = character?.favourites ?? 0;
+
   // Parse description into info items + cleaned text
-  const { info: infoFromDescription, text: cleanedDescription } = parseDescription(character?.description);
+  const {
+    info: infoFromDescription,
+    text: cleanedDescription,
+  } = parseDescription(character?.description);
 
   // Build the combined "details" list
   const detailItems = [];
 
-    if (birthday) {
-        detailItems.push({ label: "Birthday", value: birthday });
-    }
-    if (character?.age) {
-        const cleanedAge = character.age.endsWith("-")
-            ? character.age.replace("-", "+")   // "15-" → "15+"
-            : character.age;
-        detailItems.push({ label: "Age", value: cleanedAge });
-    }
-    if (character?.gender) {
-        detailItems.push({ label: "Gender", value: character.gender });
-    }
+  if (birthday) {
+    detailItems.push({ label: "Birthday", value: birthday });
+  }
+  if (character?.age) {
+    const cleanedAge = character.age.endsWith("-")
+      ? character.age.replace("-", "+") // "15-" → "15+"
+      : character.age;
+    detailItems.push({ label: "Age", value: cleanedAge });
+  }
+  if (character?.gender) {
+    detailItems.push({ label: "Gender", value: character.gender });
+  }
 
-    for (const item of infoFromDescription) {
-        detailItems.push(item);
-    }
+  for (const item of infoFromDescription) {
+    detailItems.push(item);
+  }
 
-  const appearances = character?.media?.nodes ?? [];
+  // Appearances are now media.edges (not nodes)
+  const appearances = (character?.media?.edges ?? []).filter(Boolean);
+
+  // --- Voice actors aggregation (CV) ---
+
+  // Collect unique voice actors across all appearances, keyed by id+language
+  const vaMap = new Map();
+
+  for (const edge of appearances) {
+    if (!edge.voiceActors) continue;
+
+    for (const va of edge.voiceActors) {
+      if (!va) continue;
+
+      const language = va.languageV2 || "Unknown";
+      const key = `${va.id}-${language}`;
+
+      if (!vaMap.has(key)) {
+        vaMap.set(key, {
+          id: va.id,
+          fullName: va.name?.full || "Unknown",
+          nativeName: va.name?.native || null,
+          language,
+          siteUrl: va.siteUrl || null,
+          image: va.image?.large || null,
+        });
+      }
+    }
+  }
+
+  // Group CVs by language
+  const vaGroupsByLanguage = {};
+  for (const va of vaMap.values()) {
+    const lang = va.language || "Unknown";
+    if (!vaGroupsByLanguage[lang]) {
+      vaGroupsByLanguage[lang] = [];
+    }
+    vaGroupsByLanguage[lang].push(va);
+  }
+
+  const vaLanguages = Object.keys(vaGroupsByLanguage).sort((a, b) => {
+    if (a === "Japanese") return -1;
+    if (b === "Japanese") return 1;
+    return a.localeCompare(b);
+  });
 
   return (
     <div className="container py-4">
@@ -175,10 +290,13 @@ export default function CharacterPage() {
                 />
               )}
 
-              <div className="mb-2">
-                <span className="badge bg-primary me-2">
-                  {character.favourites ?? 0} favourites
-                </span>
+              <div className="mb-3">
+                <div className="character-favorites-chip">
+                  <span className="character-favorites-icon">♥</span>
+                  <span className="character-favorites-text">
+                    {favouriteCount.toLocaleString()} favorites on AniList
+                  </span>
+                </div>
               </div>
 
               {character.siteUrl && (
@@ -194,67 +312,92 @@ export default function CharacterPage() {
               )}
             </div>
 
-            {/* Right column: name, alt names, description */}
+            {/* Right column: name, alt names, details, CVs, description */}
             <div className="col-12 col-md-8 col-lg-9">
-                <h1 className="mb-2">{name}</h1>
+              <h1 className="mb-2">{name}</h1>
 
-                {character.name?.native && (
-                    <p className="text-muted mb-1">
-                    <strong>Native:</strong> {character.name.native}
+              {character.name?.native && (
+                <p className="text-muted mb-1">
+                  <strong>Native:</strong> {character.name.native}
+                </p>
+              )}
+
+              {altNames && (
+                <p className="text-muted mb-3">
+                  <strong>Also known as:</strong> {altNames}
+                </p>
+              )}
+
+              {detailItems.length > 0 && (
+                <div className="mb-3">
+                  {detailItems.map((item) => (
+                    <p key={item.label} className="mb-1">
+                      <strong>{item.label}:</strong>{" "}
+                      {renderTextWithSpoilers(item.value)}
                     </p>
-                )}
+                  ))}
+                </div>
+              )}
 
-                {altNames && (
-                    <p className="text-muted mb-3">
-                    <strong>Also known as:</strong> {altNames}
+              {vaLanguages.length > 0 && (
+                <div className="mb-3">
+                  <h5 className="mb-2">Voice Actors</h5>
+
+                  {vaLanguages.map((lang) => (
+                    <p key={lang} className="small mb-1">
+                      <span className="text-muted text-uppercase me-1">
+                        {lang}:
+                      </span>
+                      {vaGroupsByLanguage[lang].map((va, idx) => (
+                        <span key={`${va.id}-${lang}`}>
+                          {va.fullName}
+                          {va.nativeName &&
+                            va.nativeName !== va.fullName && (
+                              <> ({va.nativeName})</>
+                            )}
+                          {idx < vaGroupsByLanguage[lang].length - 1 ? "/ " : ""}
+                        </span>
+                      ))}
                     </p>
-                )}
+                  ))}
+                </div>
+              )}
 
-                {detailItems.length > 0 && (
-                    <div className="mb-3">
-                    {detailItems.map((item) => (
-                        <p key={item.label} className="mb-1">
-                        <strong>{item.label}:</strong> {item.value}
-                        </p>
-                    ))}
-                    </div>
-                )}
-
-                {cleanedDescription && (
-                    <div className="mb-3">
-                        <p style={{ whiteSpace: "pre-wrap" }}>
-                        {cleanedDescription.split(/(\[\[SPOILER:.+?\]\])/).map((part, idx) => {
-                            const match = part.match(/^\[\[SPOILER:(.+?)\]\]$/);
-                            if (match) {
-                            return (
-                                <Spoiler key={idx}>
-                                {match[1]}
-                                </Spoiler>
-                            );
-                            }
-                            return <span key={idx}>{part}</span>;
-                        })}
-                        </p>
-                    </div>
-                )}
+              {cleanedDescription && (
+                <div className="mb-3 mt-4">
+                  <p style={{ whiteSpace: "pre-wrap" }}>
+                    {renderTextWithSpoilers(cleanedDescription)}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Anime appearances */}
-          <div className="mb-4">
-            <h2 className="h4 mb-3">Anime Appearances</h2>
-            {appearances.length === 0 && (
-              <p className="text-muted">No anime listed for this character.</p>
-            )}
+          {appearances.length > 0 && (
+            <div className="mt-4">
+              <h4 className="fw-bold mb-3">Anime Appearances</h4>
 
-            {appearances.length > 0 && (
               <div className="row g-3">
-                {appearances.map((media) => {
+                {appearances.map((edge) => {
+                  const media = edge?.node;
+
+                  if (!media || !media.title) {
+                    return null;
+                  }
+
+                  const titleObj = media.title || {};
                   const mediaTitle =
-                    media.title.english ??
-                    media.title.userPreferred ??
-                    media.title.romaji ??
+                    titleObj.english ??
+                    titleObj.userPreferred ??
+                    titleObj.romaji ??
                     "Untitled";
+
+                  const hasSeasonInfo = media.season && media.seasonYear;
+                  const imageSrc =
+                    media.coverImage?.extraLarge ||
+                    media.coverImage?.large ||
+                    media.coverImage?.medium;
 
                   return (
                     <div
@@ -265,29 +408,32 @@ export default function CharacterPage() {
                         to={`/anime/${media.id}`}
                         className="text-decoration-none text-reset"
                       >
-                        <div className="card h-100">
-                          {(media.coverImage?.extraLarge ||
-                            media.coverImage?.large ||
-                            media.coverImage?.medium) && (
-                            <img
-                              src={
-                                media.coverImage.extraLarge ||
-                                media.coverImage.large ||
-                                media.coverImage.medium
-                              }
-                              alt={mediaTitle}
-                              className="card-img-top"
-                            />
+                        <div className="character-appearance-card h-100">
+                          {imageSrc && (
+                            <div className="character-appearance-card-image-wrapper">
+                              <img
+                                src={imageSrc}
+                                alt={mediaTitle}
+                                className="character-appearance-card-image"
+                              />
+                            </div>
                           )}
-                          <div className="card-body">
-                            <h3 className="h6 card-title mb-1">
+
+                          <div className="character-appearance-card-body">
+                            <div className="character-appearance-card-title">
                               {mediaTitle}
-                            </h3>
-                            <p className="card-text text-muted mb-1">
-                              {media.format} •{" "}
-                              {media.season} {media.seasonYear}
-                            </p>
-                            {/* No role here; Character.media doesn't expose role */}
+                            </div>
+
+                            <div className="character-appearance-card-meta">
+                              <span className="character-appearance-chip">
+                                {media.format ?? "Unknown format"}
+                              </span>
+                              {hasSeasonInfo && (
+                                <span className="character-appearance-meta-text">
+                                  {media.season} {media.seasonYear}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </Link>
@@ -295,8 +441,9 @@ export default function CharacterPage() {
                   );
                 })}
               </div>
-            )}
-          </div>
+            </div>
+          )}
+
         </>
       )}
     </div>

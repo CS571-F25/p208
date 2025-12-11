@@ -246,6 +246,53 @@ const ANIME_DETAIL_QUERY = `
         url
       }
       siteUrl
+
+      characters(sort: [ROLE, RELEVANCE, ID], page: 1, perPage: 50) {
+        edges {
+          role
+          node {
+            id
+            name {
+              full
+              native
+              userPreferred
+            }
+            image {
+              large
+              medium
+            }
+          }
+        }
+      }
+
+      relations {
+        edges {
+          relationType
+          node {
+            id
+            type
+            title {
+              english
+              romaji
+              native
+              userPreferred
+            }
+            coverImage {
+              large
+            }
+            format
+            season
+            seasonYear
+            startDate {
+              year
+              month
+              day
+            }
+            siteUrl
+          }
+        }
+      }
+
     }
   }
 `;
@@ -275,24 +322,39 @@ const CHARACTER_DETAIL_QUERY = `
       favourites
       siteUrl
       media(sort: POPULARITY_DESC, type: ANIME) {
-        nodes {
-          id
-          title {
-            english
-            romaji
-            native
-            userPreferred
+        edges {
+          characterRole
+          node {
+            id
+            title {
+              english
+              romaji
+              native
+              userPreferred
+            }
+            coverImage {
+              extraLarge
+              large
+              medium
+            }
+            format
+            season
+            seasonYear
+            episodes
+            averageScore
           }
-          coverImage {
-            extraLarge
-            large
-            medium
+          voiceActors {
+            id
+            name {
+              full
+              native
+            }
+            languageV2
+            image {
+              large
+            }
+            siteUrl
           }
-          format
-          season
-          seasonYear
-          episodes
-          averageScore
         }
       }
     }
